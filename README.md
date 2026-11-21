@@ -7,6 +7,11 @@
 
 # VRTX
 
+> **Upgrading from the earlier version?** Don't run the installer over it. Run
+> [VRTX-Migrate](https://github.com/Slimohan/VRTX-Migrate) instead: it moves your tools, dock positions, offsets and
+> settings to VRTX and removes the old install. That includes a printer that stopped with *"Include file … does
+> not exist"* after an update.
+
 One package for the tools of a tool changer on Klipper and Kalico: calibration, tool control and docking.
 Every nozzle touches a small probe, the macros turn the touch points into the X, Y and Z offsets of each tool,
 and you do nothing in between. Prefer to align by eye? The installer also offers a camera method. The same package
