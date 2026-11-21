@@ -332,15 +332,24 @@ UNIT
             echo "nginx: $site not found (set NGINX_SITE=... to the right file and run again)"
         elif grep -qF "$snippet" "$site"; then
             echo "nginx: /$name/ already set up in $site"
+        elif ! nginxerr=$(sudo nginx -t 2>&1); then
+            # nginx is already broken before VRTX touches it (often an include of a file that was
+            # moved or deleted): say so, with nginx's own message, instead of failing silently.
+            echo "nginx: NOT SET UP. Your nginx config already fails its check, before VRTX changed anything:"
+            echo "$nginxerr" | grep -i 'emerg\|error' | sed 's/^/    /'
+            echo "  Fix that line (it names the file and line number), then run ./install.sh again."
+            echo "  Until then the VRTX page is only at http://<this computer>:$pport/ and Mainsail may not survive a reboot."
         else
             sudo cp "$site" "$site.$name-backup"
             # insert the include as the first line inside the server block
-            if sudo sed -i "0,/server[[:space:]]*{/s||&\n    include $snippet;  # VRTX page ($name)|" "$site" && sudo nginx -t >/dev/null 2>&1; then
+            if sudo sed -i "0,/server[[:space:]]*{/s||&\n    include $snippet;  # VRTX page ($name)|" "$site" && nginxerr=$(sudo nginx -t 2>&1); then
                 sudo systemctl reload nginx
                 echo "nginx: the page is at http://<printer>/$name/ via $site (backup: $site.$name-backup)"
             else
                 sudo cp "$site.$name-backup" "$site"
-                echo "nginx: could not add /$name/, $site restored unchanged"
+                echo "nginx: NOT SET UP. Adding /$name/ made nginx's check fail, so $site was restored unchanged:"
+                echo "$nginxerr" | grep -i 'emerg\|error' | sed 's/^/    /'
+                echo "  The VRTX page is only at http://<this computer>:$pport/ until this is fixed."
             fi
         fi
     done
