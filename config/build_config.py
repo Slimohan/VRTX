@@ -148,6 +148,23 @@ def build(template, calibration, tools, changer="full"):
     return "# VRTX-INSTALL: calibration=%s tools=%d changer=%s\n%s" % (calibration, tools, changer, text)
 
 
+DEFAULT_VARIABLES = "filename: ~/printer_data/config/variables.cfg"
+
+
+def save_variables(text, path, own):
+    """Point [save_variables] at the printer's own config folder, or switch it off when
+    printer.cfg already has one (Klipper merges two such sections, the later one wins)."""
+    if DEFAULT_VARIABLES not in text:
+        raise SystemExit("template lacks the [save_variables] filename line")
+    if own:
+        return text.replace("[save_variables]\n" + DEFAULT_VARIABLES,
+                            "# Your printer.cfg already has [save_variables]; VRTX uses that one.\n"
+                            "#[save_variables]\n#" + DEFAULT_VARIABLES)
+    if path:
+        return text.replace(DEFAULT_VARIABLES, "filename: " + path)
+    return text
+
+
 def recorded(path):
     """(calibration, tools, changer) recorded in a built file, or None.
     Files from before the changer question are full toolheads, as the template was then."""
@@ -167,6 +184,10 @@ def main():
     ap.add_argument("--calibration", default="nudge", choices=METHODS)
     ap.add_argument("--changer", default="full", choices=CHANGERS)
     ap.add_argument("--tools", type=int, default=10)
+    ap.add_argument("--variables", metavar="FILE",
+                    help="path for [save_variables] (the printer's config folder / variables.cfg)")
+    ap.add_argument("--own-save-variables", action="store_true",
+                    help="printer.cfg already has [save_variables]: leave VRTX's switched off")
     ap.add_argument("--template", default=os.path.join(HERE, "vrtx.cfg"))
     ap.add_argument("--record-of", metavar="FILE", help="print 'calibration tools changer' recorded in FILE and exit")
     ap.add_argument("-o", "--output")
@@ -180,6 +201,7 @@ def main():
         raise SystemExit("--tools must be between 1 and 10")
     with open(a.template) as f:
         text = build(f.read(), a.calibration, a.tools, a.changer)
+    text = save_variables(text, a.variables, a.own_save_variables)
     if a.output:
         with open(a.output, "w") as f:
             f.write(text)

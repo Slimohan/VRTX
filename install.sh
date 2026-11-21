@@ -98,6 +98,12 @@ ask_number() {   # $1 = the question, $2 = lowest, $3 = highest answer; the answ
         echo "  Please type a number from $2 to $3."
     done
 }
+# [save_variables]: in this printer's config folder, or the one printer.cfg already has
+if grep -qs '^\[save_variables\]' "$conf/printer.cfg"; then
+    varargs="--own-save-variables"
+else
+    varargs="--variables $conf/variables.cfg"
+fi
 if [ ! -e "$dest/vrtx.cfg" ]; then
     command -v python3 >/dev/null 2>&1 || { echo "python3 is needed to build vrtx.cfg"; exit 1; }
     calibration="$CALIBRATION"
@@ -152,7 +158,7 @@ if [ ! -e "$dest/vrtx.cfg" ]; then
             echo "no terminal: 10 tools (TOOLS=4 for four tools)"
         fi
     fi
-    python3 "$build" --calibration "$calibration" --changer "$changer" --tools "$tools" -o "$dest/vrtx.cfg"
+    python3 "$build" --calibration "$calibration" --changer "$changer" --tools "$tools" $varargs -o "$dest/vrtx.cfg"
     echo "  created vrtx.cfg for $tools tool(s), $changer tool changer, calibration method $calibration - this is the one file you edit"
 elif grep -q "^# Joined from your numbered files" "$dest/vrtx.cfg" && [ -d "$dest/old" ]; then
     :   # a joined file always differs from the template, nothing to compare
@@ -167,7 +173,7 @@ elif command -v python3 >/dev/null 2>&1; then
         tools=10 changer=full
     fi
     newtmp=$(mktemp)
-    python3 "$build" --calibration "$calibration" --changer "$changer" --tools "$tools" -o "$newtmp"
+    python3 "$build" --calibration "$calibration" --changer "$changer" --tools "$tools" $varargs -o "$newtmp"
     if cmp -s "$newtmp" "$dest/vrtx.cfg"; then
         rm -f "$newtmp"
     else
