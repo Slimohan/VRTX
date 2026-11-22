@@ -482,7 +482,8 @@ of every tool, so you do not pick them by hand.
   after the sync.
 - **When it updates:** the VRTX page service checks every 5 seconds, so a change on the page or with
   `VRTX_SET_FILAMENT` is there a moment later; then press sync in Orca again. Orca only reads, it never writes back.
-- **Tools without a filament** are left out. Only the entries `T0` ... `T9` are VRTX's; other `lane_data` entries
+- **Tools without a filament** get an entry with an empty material, which Orca shows as an empty slot, so the number
+  of slots always matches the tools and the slots after it keep their place. Only the entries `T0` ... `T9` are VRTX's; other `lane_data` entries
   (from an MMU, for instance) are not touched. If you also edit filament slots in Mainsail, VRTX's values win for
   `T0` ... `T9`.
 - **Needs the page service** (`vrtx`, set up by `install.sh`). Switch the sync off with

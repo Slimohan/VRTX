@@ -245,7 +245,11 @@ def with_spool(f, spool):
 def lane_entries(status, spool=lambda sid: None):
     """The lane_data entries VRTX wants, from a printer status answer.
     None means: do not touch lane_data (sync off, or no tool changer yet).
-    spool(id) gives the Spoolman values of a spool (None without Spoolman)."""
+    spool(id) gives the Spoolman values of a spool (None without Spoolman).
+    Every tool gets an entry: a tool without a filament gets an empty material,
+    which OrcaSlicer shows as an empty slot. Orca counts the slots up to the
+    highest lane it finds, so a missing lane would shorten its filament list
+    (and break the flush matrix of a project with more filaments)."""
     tc = status.get("toolchanger")
     settings = status.get("gcode_macro _VRTX_TOOLS_SETTINGS") or {}
     if not tc or str(settings.get("slicer_sync", True)).lower() in ("false", "0", "no"):
@@ -256,9 +260,11 @@ def lane_entries(status, spool=lambda sid: None):
         if not 0 <= int(n) <= 9:
             continue
         f = with_spool(variables.get("t%d_filament" % n), spool)
+        e = {"lane": str(n), "material": ""}
         if not isinstance(f, dict) or not (f.get("material") or f.get("color")):
+            want["T%d" % n] = e   # no filament: an empty slot
             continue
-        e = {"lane": str(n), "material": str(f.get("material") or "")}
+        e["material"] = str(f.get("material") or "")
         col = str(f.get("color") or "").strip().lstrip("#").upper()
         if len(col) == 6:
             e["color"] = "#" + col
