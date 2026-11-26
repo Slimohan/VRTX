@@ -215,6 +215,23 @@ def main():
             check("calibrate park=0: old ending, the starting tool is mounted again",
                   "_VRTX_SELECT T=0" in lines and "UNSELECT_TOOL" not in lines, lines)
 
+    # a tool whose dock is not taught is left out, the run goes on
+    p = printer_state(s_park_after_calibrate=1)
+    p["toolchanger"].tool_numbers = [0, 1, 2, 3]
+    p["toolchanger"].tool_names = ["tool T%d" % n for n in range(4)]
+    p["tool T3"] = d(gcode_x_offset=0.0, gcode_y_offset=0.0, gcode_z_offset=0.0, heater="")
+    for n in range(4):
+        p["gcode_macro _VRTX_DOCK_T%d" % n] = d(taught=0 if n == 3 else 1)
+    lines, _ = render("VRTX_CALIBRATE", p, SAVE=0)
+    measured = [l.split()[1] for l in lines if l.startswith("_VRTX_MEASURE")]
+    check("calibrate: untaught dock T3 is skipped with a message, T0 T1 T2 still measured",
+          measured == ["T=0", "T=1", "T=2"] and any("T3 skipped" in l for l in lines), lines)
+    check("calibrate: skipping a tool does not skip the park ending",
+          "UNSELECT_TOOL" in lines and lines[-2].startswith("_VRTX_CAL_RETURN"), lines)
+    lines, _ = render("VRTX_CALIBRATE", p, SAVE=0, TOOL=3)
+    check("calibrate TOOL=3 (untaught) is still measured, so the dock error stays visible",
+          any(l.startswith("_VRTX_MEASURE T=3") for l in lines), lines)
+
     # refusals
     p = printer_state(nudge_clear_z=400.0)
     lines, _ = render("VRTX_CALIBRATE", p, SAVE=0)
