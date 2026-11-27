@@ -162,15 +162,27 @@ def main():
     check("lift: calls the clear height, no lift to safe_z", lines == ["_VRTX_NUDGE_CLEAR"], lines)
 
     # --- watchdog -------------------------------------------------------------------------
+    # Klipper renders a delayed gcode when its timer fires (one second after the arming, while the
+    # calibration runs), not when it runs. So the delayed gcode itself must hold no condition.
+    lines, _ = render("_VRTX_CAL_WATCHDOG", printer_state())
+    check("watchdog: the delayed gcode only calls the macro, whatever the state at render time",
+          lines == ["_VRTX_CAL_WATCHDOG_RUN"], lines)
     p = printer_state()
+    p["gcode_macro _VRTX_STATE"].cal_armed = 1
+    p["gcode_move"].gcode_position.x = 22.0
+    p["gcode_move"].gcode_position.y = 11.0
     lines, _ = render("_VRTX_CAL_WATCHDOG", p)
+    check("watchdog: armed and far from the pin at render time still only calls the macro",
+          lines == ["_VRTX_CAL_WATCHDOG_RUN"], lines)
+    p = printer_state()
+    lines, _ = render("_VRTX_CAL_WATCHDOG_RUN", p)
     check("watchdog: not armed, does nothing", lines == [], lines)
     for label, x, y, expect in (("near the pin", 98.0, 322.0, True), ("at the docks", 22.0, 11.0, False)):
         p = printer_state()
         p["gcode_macro _VRTX_STATE"].cal_armed = 1
         p["gcode_move"].gcode_position.x = x
         p["gcode_move"].gcode_position.y = y
-        lines, _ = render("_VRTX_CAL_WATCHDOG", p)
+        lines, _ = render("_VRTX_CAL_WATCHDOG_RUN", p)
         lifted = "_VRTX_NUDGE_CLEAR" in lines
         check("watchdog: armed, %s -> %s" % (label, "raises" if expect else "leaves it"), lifted == expect, lines)
         check("watchdog: armed, %s -> disarms itself" % label, any("cal_armed VALUE=0" in l for l in lines), lines)
