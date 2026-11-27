@@ -548,11 +548,18 @@ What the VRTX macros assume, so your dock macros and settings have to fit:
 
 - **Every calibration step uses the dock macros.** `VRTX_CALIBRATE` mounts the reference tool, then every other
   tool in turn, and finally puts the tool back that was mounted when it started. With ten tools that is ten pickup and
-  dropoff cycles, so test the docking on its own first.
+  dropoff cycles, so test the docking on its own first. With `variable_park_after_calibrate: 1` it ends differently:
+  the last tool that was measured goes back into its dock, from the Nudge clear height, and the carriage returns to
+  where it started (no tool is mounted afterwards). It is off by default.
 - **After a tool change the tool is mounted and the toolhead is clear of the dock.** VRTX then raises to `safe_z`
   and travels to the Nudge probe or the switch.
-- **`safe_z` must clear everything on the way**: the docks, the tools that are parked, the Nudge and the
-  switch. It is a setting in `_VRTX_SETTINGS`. Start high. (The dock moves have their own `safe_z` in section 7; on a
+- **`safe_z` must clear everything on the way**: the docks and the tools that are parked, and the switch. It is a
+  setting in `_VRTX_SETTINGS`. Start high. The Nudge has its own **clear height**: the toolhead goes up to
+  `nudge_clear_z` (10 mm by default) above `nudge_z`, or to `safe_z` if that is higher, before it moves over the pin
+  and after every measurement, and never down. A low `safe_z` therefore cannot drive the nozzle into the pin. If the
+  calibration stops with an error while the nozzle is near the pin, the toolhead is raised to that height once the
+  macro has ended, so a move by hand cannot run into the pin. Tools whose offsets are not measured yet can hang lower
+  than the reference tool: give `nudge_clear_z` enough room for that. (The dock moves have their own `safe_z` in section 7; on a
   printer whose bed moves in Z, `z_mode` `keep` or `lift` changes what it means, see
   [docs/docking.md](docs/docking.md#printers-whose-bed-moves-in-z).)
 - **Home first.** The macros need homed axes, as the docking does.
@@ -784,6 +791,14 @@ python3 tests/klipper_check.py --klipper ~/test-klipper --toolchanger ~/test-kli
 
 Use checkouts made for the test, not your printer's: the script builds Klipper's Linux MCU once and links the
 klipper-toolchanger modules into that checkout.
+
+`tests/render_check.py` needs only Jinja2. It renders the calibration macros (`VRTX_CALIBRATE` with and without
+`park_after_calibrate`, the Nudge clear height, the error watchdog and the return move) with a made-up printer state and checks
+the G-code lines they would run. It does not run anything on a printer.
+
+```
+python3 tests/render_check.py
+```
 
 ## Licence and credits
 
